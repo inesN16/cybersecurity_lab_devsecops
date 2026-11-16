@@ -158,6 +158,17 @@ def update_grade():
     data = flask.request.get_json()
 
     student_id = data["student_id"]
+    course_id = data["course_id"]
+    grade = data["grade"]
+
+    row = find_grade(student_id, course_id)
+    if row is None:
+        GRADES.append({"student_id": student_id, "course_id": course_id, "grade": grade})
+    else:
+        row["grade"] = grade
+
+    return {"status": "ok", "student_id": student_id, "course_id": course_id, "grade": grade}
+
 
 @app.get("/files")
 def download_file():
@@ -165,7 +176,6 @@ def download_file():
         return {"error": "unauthenticated"}, 401
 
     raw_path = flask.request.args.get("path", "")
-    target = MATERIALS_DIR / raw_path
     
     target = (MATERIALS_DIR / raw_path).resolve()
     if not target.is_relative_to(MATERIALS_DIR.resolve()):
