@@ -125,27 +125,54 @@ def get_grades(student_id):
     rows = [row for row in GRADES if row["student_id"] == sid]
     return flask.jsonify(rows)
 
+#@app.post("/grades/update")
+#def update_grade():
+#    data = flask.request.get_json()
+
+ #   student_id = data["student_id"]
+  #  course_id = data["course_id"]
+#    grade = data["grade"]
+
+ #   row = find_grade(student_id, course_id)
+ #   if row is None:
+ #       GRADES.append({"student_id": student_id, "course_id": course_id, "grade": grade})
+ #   else:
+ #       row["grade"] = grade
+
+ #   return {"status": "ok", "student_id": student_id, "course_id": course_id, "grade": grade}
+
+#@app.get("/files")
+#def download_file():
+#    raw_path = flask.request.args.get("path", "")
+#    target = MATERIALS_DIR / raw_path
+#    return flask.send_file(target)
+
+
 @app.post("/grades/update")
 def update_grade():
+    if "user" not in flask.session:
+        return {"error": "unauthenticated"}, 401
+    if flask.session.get("role") not in ["professor", "admin"]:
+        return {"error": "unauthorized"}, 403
+
     data = flask.request.get_json()
 
     student_id = data["student_id"]
-    course_id = data["course_id"]
-    grade = data["grade"]
-
-    row = find_grade(student_id, course_id)
-    if row is None:
-        GRADES.append({"student_id": student_id, "course_id": course_id, "grade": grade})
-    else:
-        row["grade"] = grade
-
-    return {"status": "ok", "student_id": student_id, "course_id": course_id, "grade": grade}
 
 @app.get("/files")
 def download_file():
+    if "user" not in flask.session:
+        return {"error": "unauthenticated"}, 401
+
     raw_path = flask.request.args.get("path", "")
     target = MATERIALS_DIR / raw_path
+    
+    target = (MATERIALS_DIR / raw_path).resolve()
+    if not target.is_relative_to(MATERIALS_DIR.resolve()):
+        return {"error": "access denied"}, 403
+
     return flask.send_file(target)
+
 
 @app.errorhandler(Exception)
 def handle_error(exc):
