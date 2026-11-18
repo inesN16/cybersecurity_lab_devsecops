@@ -150,16 +150,36 @@ def get_grades(student_id):
 
 @app.post("/grades/update")
 def update_grade():
+    # R1: tem de estar autenticado
     if "user" not in flask.session:
-        return {"error": "unauthenticated"}, 401
-    if flask.session.get("role") not in ["professor", "admin"]:
-        return {"error": "unauthorized"}, 403
+        return {"error": "authentication required"}, 401
 
-    data = flask.request.get_json()
+    # R3/R4: só professores e administradores
+    role = flask.session.get("role")
+    if role not in ("professor", "admin"):
+        return {"error": "forbidden"}, 403
 
-    student_id = data["student_id"]
-    course_id = data["course_id"]
-    grade = data["grade"]
+    # R5: validar o input
+    data = flask.request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return {"error": "invalid request"}, 400
+
+    student_id = data.get("student_id")
+    course_id = data.get("course_id")
+    grade = data.get("grade")
+
+    if isinstance(student_id, bool) or not isinstance(student_id, int) or student_id <= 0:
+        return {"error": "invalid student_id"}, 400
+    if student_id not in STUDENT_PROFILES:
+        return {"error": "invalid student_id"}, 400
+    if course_id not in ("SRS", "SSD"):
+        return {"error": "invalid course_id"}, 400
+    if isinstance(grade, bool) or not isinstance(grade, (int, float)) or not (0 <= grade <= 20):
+        return {"error": "invalid grade"}, 400
+
+    # R3: o professor só pode mexer nas cadeiras que leciona (esta é a parte que faltava)
+    if role == "professor" and course_id not in flask.session.get("courses", []):
+        return {"error": "forbidden"}, 403
 
     row = find_grade(student_id, course_id)
     if row is None:
@@ -168,7 +188,6 @@ def update_grade():
         row["grade"] = grade
 
     return {"status": "ok", "student_id": student_id, "course_id": course_id, "grade": grade}
-
 
 @app.get("/files")
 def download_file():
