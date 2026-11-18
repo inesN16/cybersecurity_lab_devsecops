@@ -43,3 +43,12 @@ def test_alice_tenta_mudar_a_sua_nota(client):
     # verificar se a nota na base de dados (memoria) nao foi alterada
     nota_atual = api.find_grade(1001, "SRS")
     assert nota_atual["grade"] != 20
+
+
+def test_professor_nao_pode_mudar_outra_cadeira(client):
+    login(client, "prof_srs", "profpw")
+    res = client.post(
+        "/grades/update",
+        json={"student_id": 1001, "course_id": "SSD", "grade": 20},
+    )
+    assert res.status_code == 403
